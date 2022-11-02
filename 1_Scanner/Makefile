@@ -2,7 +2,6 @@
 # ./lex/tiny.l --> ./cminus.l
 
 CC = gcc
-
 CFLAGS = -W -Wall
 
 OBJS = main.o util.o scan.o
