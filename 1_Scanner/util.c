@@ -17,33 +17,34 @@ void printToken(TokenType token, const char *tokenString)
   switch (token)
   {
   case IF:
-  case THEN:
   case ELSE:
-  case END:
-  case REPEAT:
-  case UNTIL:
-  case READ:
-  case WRITE:
+  case WHILE:
+  case RETURN:
+  case INT:
+  case VOID:
     fprintf(listing,
             "reserved word: %s\n", tokenString);
     break;
   case ASSIGN:
-    fprintf(listing, ":=\n");
+    fprintf(listing, "=\n");
+    break;
+  case EQ:
+    fprintf(listing, "==\n");
+    break;
+  case NE:
+    fprintf(listing, "!=\n");
     break;
   case LT:
     fprintf(listing, "<\n");
     break;
-  case EQ:
-    fprintf(listing, "=\n");
+  case LE:
+    fprintf(listing, "<=\n");
     break;
-  case LPAREN:
-    fprintf(listing, "(\n");
+  case GT:
+    fprintf(listing, ">\n");
     break;
-  case RPAREN:
-    fprintf(listing, ")\n");
-    break;
-  case SEMI:
-    fprintf(listing, ";\n");
+  case GE:
+    fprintf(listing, ">=\n");
     break;
   case PLUS:
     fprintf(listing, "+\n");
@@ -56,6 +57,30 @@ void printToken(TokenType token, const char *tokenString)
     break;
   case OVER:
     fprintf(listing, "/\n");
+    break;
+  case LPAREN:
+    fprintf(listing, "(\n");
+    break;
+  case RPAREN:
+    fprintf(listing, ")\n");
+    break;
+  case LBRACE:
+    fprintf(listing, "[\n");
+    break;
+  case RBRACE:
+    fprintf(listing, "]\n");
+    break;
+  case LCURLY:
+    fprintf(listing, "{\n");
+    break;
+  case RCURLY:
+    fprintf(listing, "}\n");
+    break;
+  case SEMI:
+    fprintf(listing, ";\n");
+    break;
+  case COMMA:
+    fprintf(listing, ",\n");
     break;
   case ENDFILE:
     fprintf(listing, "EOF\n");
