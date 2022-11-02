@@ -1,0 +1,5 @@
+compiler_testcase/**/*
+cminus_cimpl
+cminus_lex
+*.o
+lex.yy.c
