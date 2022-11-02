@@ -31,5 +31,5 @@ util.o: util.c globals.h util.h
 lex.yy.o: lex.yy.c globals.h util.h scan.h
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-lex.yy.c: cminus.l
+lex.yy.c: ./lex/cminus.l
 	flex -o $@ $<
