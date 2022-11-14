@@ -1,6 +1,6 @@
 /****************************************************/
 /* File: cminus.y                                   */
-/* The TINY Yacc/Bison specification file           */
+/* The C-Minus Yacc/Bison specification file        */
 /* Compiler Construction: Principles and Practice   */
 /* Kenneth C. Louden                                */
 /****************************************************/
@@ -20,16 +20,114 @@ static int yylex(void); // added 11/2/11 to ensure no conflict with lex
 
 %}
 
-%token IF THEN ELSE END REPEAT UNTIL READ WRITE
+%token IF ELSE WHILE RETURN INT VOID
 %token ID NUM 
-%token ASSIGN EQ LT PLUS MINUS TIMES OVER LPAREN RPAREN SEMI
+%token ASSIGN EQ NE LE LT GE GT PLUS MINUS TIMES OVER LPAREN RPAREN LBRACE RBRACE LCURLY RCURLY SEMI COMMA
 %token ERROR 
 
-%% /* Grammar for TINY */
+%% /* Grammar for C-Minus */
 
-program     : stmt_seq
+program     : decl_list
                  { savedTree = $1;} 
             ;
+decl_list   : decl_list decl
+                { }
+            | decl
+                { }
+            ;
+decl        : var_decl { }
+            | fun_decl { }
+            ;
+var_decl    : type_spec ID SEMI
+                { }
+            | type_spec ID LBRACE NUM RBRACE SEMI
+                { }
+            ;
+type_spec   : INT { }
+            | VOID { }
+            ;
+fun_decl    : type_spec ID LPAREN params RPAREN cmpnd_stmt
+                { }
+            ;
+params      : param_list { }
+            | VOID { }
+            ;
+param_list  : param_list COMMA param { }
+            | param { }
+            ;
+param       : type_spec ID { }
+            | type_spec ID LBRACE RBRACE { }
+            ;
+cmpnd_stmt  : LCURLY local_decls stmt_list RCURLY { }
+            ;
+local_decls : local_decls var_decl { }
+            | { }
+            ;
+stmt_list   : stmt_list stmt { }
+            | { }
+            ;
+stmt        : expr_stmt { }
+            | cmpnd_stmt { }
+            | select_stmt { }
+            | iter_stmt { }
+            | ret_stmt { }
+            ;
+expr_stmt   : expr SEMI { }
+            | SEMI { }
+            ;
+select_stmt : IF LPAREN expr RPAREN stmt { }
+            | IF LPAREN expr RPAREN ELSE stmt { }
+            ;
+iter_stmt   : WHILE LPAREN expr RPAREN stmt { }
+            ;
+ret_stmt    : RETURN SEMI { }
+            | RETURN expr SEMI { }
+            ;
+expr        : var ASSIGN expr { }
+            | simple_expr { }
+            ;
+var         : ID { }
+            | ID LBRACE expr RBRACE { }
+            ;
+simple_expr : addtv_expr  relop addtv_expr { }
+            | addtv_expr { }
+            ;
+relop       : LE { }
+            | LT { }
+            | GT { }
+            | GE { }
+            | EQ { }
+            | NE { }
+            ;
+addtv_expr  : addtv_expr addop term { }
+            | term { }
+            ;
+addop       : PLUS { }
+            | MINUS { }
+            ;
+term        : term mulop factor { }
+            | factor { }
+            ;
+mulop       : TIMES { }
+            | OVER { }
+            ;
+factor      : LCURLY expr RCURLY { }
+            | var { }
+            | call { }
+            | NUM { }
+            ;
+call        : ID LPAREN args RPAREN { }
+            ;
+args        : arg_list { }
+            | { }
+            ;
+arg_list    : arg_list COMMA expr { }
+            | expr { }
+            ;
+
+
+
+
 stmt_seq    : stmt_seq SEMI stmt
                  { YYSTYPE t = $1;
                    if (t != NULL)
