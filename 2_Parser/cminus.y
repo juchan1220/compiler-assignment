@@ -259,7 +259,7 @@ term        : term mulop factor {
 mulop       : TIMES { $$ = TIMES; }
             | OVER { $$ = OVER; }
             ;
-factor      : LCURLY expr RCURLY { $$ = $2; }
+factor      : LPAREN expr RPAREN { $$ = $2; }
             | var { $$ = $1; }
             | call { $$ = $1; }
             | NUM {
