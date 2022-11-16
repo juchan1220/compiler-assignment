@@ -70,14 +70,16 @@ var_decl    : type_spec ID LBRACE NUM RBRACE SEMI {
               switch ($1) {
                 case Void:
                   $$->type = VoidArray;
+                  break;
                 case Integer:
                   $$->type = IntegerArray;
+                  break;
                 default:
                   /* !! this should not happen !! */
                   yyerror("token type_spec has invalid semantic value.");
-                  YYABORT;
+                  // YYABORT;
               }
-              $$->attr.name = strdup($2);
+              $$->attr.name = copyString($2);
 
               $$->child[0] = newExpNode(ConstK);
               $$->child[0]->attr.val = $4;
@@ -85,7 +87,7 @@ var_decl    : type_spec ID LBRACE NUM RBRACE SEMI {
             | type_spec ID SEMI {
               $$ = newDeclNode(VarK);
               $$->type = $1;
-              $$->attr.name = strdup($2);
+              $$->attr.name = copyString($2);
             }
             ;
 type_spec   : INT { $$ = Integer; }
@@ -122,12 +124,14 @@ param       : type_spec ID LBRACE RBRACE {
               switch ($1) {
                 case Void:
                   $$->type = VoidArray;
+                  break;
                 case Integer:
                   $$->type = IntegerArray;
+                  break;
                 default:
                   /* !! this should not happen !! */
                   yyerror("token type_spec has invalid semantic value.");
-                  YYABORT;
+                  // YYABORT;
               }
 
               $$->attr.name = copyString($2);
