@@ -147,8 +147,8 @@ cmpnd_stmt  : LCURLY local_decls stmt_list RCURLY {
 local_decls : local_decls var_decl {
               if ($1 == NULL) {
                 $$ = newListNode(LocalDeclListK);
-                $$->child[0] = $1;
-                $$->child[1] = $1;
+                $$->child[0] = $2;
+                $$->child[1] = $2;
               } else {
                 $$ = $1;
                 $$->child[1]->sibling = $2;
@@ -160,8 +160,8 @@ local_decls : local_decls var_decl {
 stmt_list   : stmt_list stmt { 
               if ($1 == NULL) {
                 $$ = newListNode(StmtListK);
-                $$->child[0] = $1;
-                $$->child[1] = $1;
+                $$->child[0] = $2;
+                $$->child[1] = $2;
               } else {
                 $$ = $1;
                 $$->child[1]->sibling = $2;
