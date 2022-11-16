@@ -38,13 +38,8 @@ static int yylex(void); // added 11/2/11 to ensure no conflict with lex
 %token IF ELSE WHILE RETURN INT VOID
 %token ERROR
 
-
-/* token for rule precedence */
-%token PREC_IF_ELSE_STMT
-%token PREC_IF_STMT
-
 %type<type_spec> type_spec
-%type<node> decl_list decl var_decl var fun_decl params param_list param cmpnd_stmt local_decls stmt_list stmt expr_stmt select_stmt iter_stmt ret_stmt expr simple_expr addtv_expr term factor call args arg_list
+%type<node> decl_list decl var_decl var fun_decl params param_list param cmpnd_stmt local_decls stmt_list stmt expr_stmt compl_stmt incompl_stmt ret_stmt expr simple_expr addtv_expr term factor call args arg_list
 %type<op_type> relop addop mulop
 
 %% /* Grammar for C-Minus */
@@ -174,34 +169,46 @@ stmt_list   : stmt_list stmt {
             }
             | %empty { $$ = NULL; }
             ;
-stmt        : expr_stmt { $$ = $1; }
-            | cmpnd_stmt { $$ = $1; }
-            | select_stmt { $$ = $1; }
-            | iter_stmt { $$ = $1; }
-            | ret_stmt { $$ = $1; }
+stmt        : compl_stmt { $$ = $1; }
+            | incompl_stmt { $$ = $1; }
             ;
-expr_stmt   : expr SEMI { $$ = $1; }
-            | SEMI { $$ = NULL; }
-            ;
-select_stmt : IF LPAREN expr RPAREN stmt %prec PREC_IF_STMT {
-              $$ = newStmtNode(SelectK);
-              $$->child[0] = $3;
-              $$->child[1] = $5;
-              $$->attr.has_else = FALSE;
-            }
-            | IF LPAREN expr RPAREN stmt ELSE stmt %prec PREC_IF_ELSE_STMT {
+compl_stmt  : IF LPAREN expr RPAREN compl_stmt ELSE compl_stmt {
               $$ = newStmtNode(SelectK);
               $$->child[0] = $3;
               $$->child[1] = $5;
               $$->child[2] = $7;
               $$->attr.has_else = TRUE;
             }
-            ;
-iter_stmt   : WHILE LPAREN expr RPAREN stmt {
+            | WHILE LPAREN expr RPAREN compl_stmt {
               $$ = newStmtNode(IterK);
               $$->child[0] = $3;
               $$->child[1] = $5;
             }
+            | expr_stmt { $$ = $1; }
+            | cmpnd_stmt { $$ = $1; }
+            | ret_stmt { $$ = $1; }
+            ;
+incompl_stmt: IF LPAREN expr RPAREN stmt {
+              $$ = newStmtNode(SelectK);
+              $$->child[0] = $3;
+              $$->child[1] = $5;
+              $$->attr.has_else = FALSE;
+            }
+            | IF LPAREN expr RPAREN compl_stmt ELSE incompl_stmt {
+              $$ = newStmtNode(SelectK);
+              $$->child[0] = $3;
+              $$->child[1] = $5;
+              $$->child[2] = $7;
+              $$->attr.has_else = TRUE;
+            }
+            | WHILE LPAREN expr RPAREN incompl_stmt {
+              $$ = newStmtNode(IterK);
+              $$->child[0] = $3;
+              $$->child[1] = $5;
+            }
+            ;
+expr_stmt   : expr SEMI { $$ = $1; }
+            | SEMI { $$ = NULL; }
             ;
 ret_stmt    : RETURN SEMI { $$ = newStmtNode(RetK); }
             | RETURN expr SEMI {
