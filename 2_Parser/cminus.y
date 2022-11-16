@@ -102,7 +102,11 @@ fun_decl    : type_spec ID LPAREN params RPAREN cmpnd_stmt {
             }
             ;
 params      : param_list { $$ = $1; }
-            | VOID { $$ = NULL; }
+            | VOID {
+              $$ = newListNode(ParamListK);
+              $$->child[0] = $$->child[1] = newDeclNode(ParamK);
+              $$->attr.name = NULL;
+            }
             ;
 param_list  : param_list COMMA param { 
               $$ = $1;
@@ -181,12 +185,14 @@ select_stmt : IF LPAREN expr RPAREN stmt %prec PREC_IF_STMT {
               $$ = newStmtNode(SelectK);
               $$->child[0] = $3;
               $$->child[1] = $5;
+              $$->attr.has_else = FALSE;
             }
             | IF LPAREN expr RPAREN stmt ELSE stmt %prec PREC_IF_ELSE_STMT {
               $$ = newStmtNode(SelectK);
               $$->child[0] = $3;
               $$->child[1] = $5;
               $$->child[2] = $7;
+              $$->attr.has_else = TRUE;
             }
             ;
 iter_stmt   : WHILE LPAREN expr RPAREN stmt {
