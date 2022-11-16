@@ -1,6 +1,6 @@
 /****************************************************/
 /* File: cminus.l                                   */
-/* Lex specification for C-Minu                     */
+/* Lex specification for C-Minus                    */
 /* Compiler Construction: Principles and Practice   */
 /* Kenneth C. Louden                                */
 /****************************************************/
@@ -56,8 +56,8 @@ whitespace  [ \t]+
 "}"             {return RCURLY;}
 ";"             {return SEMI;}
 ","             {return COMMA;}
-{number}        {return NUM;}
-{identifier}    {return ID;}
+{number}        {yylval.num_value = atoi(yytext); return NUM;}
+{identifier}    {yylval.id_name = copyString(yytext); return ID;}
 {newline}       {lineno++;}
 {whitespace}    {/* skip whitespace */}
 .               {return ERROR;}
