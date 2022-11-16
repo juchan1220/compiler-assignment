@@ -24,6 +24,9 @@
  * into the Yacc/Bison output itself
  */
 
+/* this header file should be included before y.tab.h */
+#include "ast.h"
+
 #ifndef YYPARSER
 
 /* the name of the following file may change */
@@ -50,40 +53,12 @@
 /* Yacc/Bison generates its own integer values
  * for tokens
  */
-typedef int TokenType; 
 
 extern FILE* source; /* source code text file */
 extern FILE* listing; /* listing output text file */
 extern FILE* code; /* code text file for TM simulator */
 
 extern int lineno; /* source line number for listing */
-
-/**************************************************/
-/***********   Syntax tree for parsing ************/
-/**************************************************/
-
-typedef enum {StmtK,ExpK,DeclK,ListK} NodeKind;
-typedef enum {CompoundK,SelectK,IterK,RetK} StmtKind;
-typedef enum {AssignK,BinaryOpK,ConstK,IdK,CallK} ExpKind;
-typedef enum {DeclListK,ParamListK,LocalDeclListK,StmtListK,ArgListK} ListKind;
-typedef enum {FunK,VarK,ParamK} DeclKind;
-
-/* ExpType is used for type checking */
-typedef enum {Void,Integer,VoidArray,IntegerArray} ExpType;
-
-#define MAXCHILDREN 3
-
-typedef struct treeNode
-   { struct treeNode * child[MAXCHILDREN];
-     struct treeNode * sibling;
-     int lineno;
-     NodeKind nodekind;
-     union { StmtKind stmt; ExpKind exp; DeclKind decl; ListKind list; } kind;
-     union { TokenType op;
-             int val;
-             char * name; } attr;
-     ExpType type; /* for type checking of exps */
-   } TreeNode;
 
 /**************************************************/
 /***********   Flags for tracing       ************/

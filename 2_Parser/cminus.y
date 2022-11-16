@@ -19,8 +19,6 @@ static int yylex(void); // added 11/2/11 to ensure no conflict with lex
 
 %}
 
-%define api.value.type union-directive
-
 %union {
  TreeNode *node;
  char* id_name;
@@ -77,7 +75,7 @@ var_decl    : type_spec ID LBRACE NUM RBRACE SEMI {
                 default:
                   /* !! this should not happen !! */
                   yyerror("token type_spec has invalid semantic value.");
-                  YYABORT();
+                  YYABORT;
               }
               $$->attr.name = strdup($2);
 
@@ -129,7 +127,7 @@ param       : type_spec ID LBRACE RBRACE {
                 default:
                   /* !! this should not happen !! */
                   yyerror("token type_spec has invalid semantic value.");
-                  YYABORT();
+                  YYABORT;
               }
 
               $$->attr.name = copyString($2);
@@ -142,8 +140,8 @@ param       : type_spec ID LBRACE RBRACE {
             ;
 cmpnd_stmt  : LCURLY local_decls stmt_list RCURLY {
               $$ = newStmtNode(CompoundK);
-              $$->child[0] = $1;
-              $$->child[1] = $2;
+              $$->child[0] = $2;
+              $$->child[1] = $3;
             }
             ;
 local_decls : local_decls var_decl {
@@ -208,7 +206,7 @@ ret_stmt    : RETURN SEMI { $$ = newStmtNode(RetK); }
             }
             ;
 expr        : var ASSIGN expr { 
-              $$ = newExprNode(AssignK);
+              $$ = newExpNode(AssignK);
               $$->child[0] = $1;
               $$->child[1] = $3;
             }
@@ -261,12 +259,12 @@ term        : term mulop factor {
 mulop       : TIMES { $$ = TIMES; }
             | OVER { $$ = OVER; }
             ;
-factor      : LCURLY expr RCURLY { $$ = $1; }
+factor      : LCURLY expr RCURLY { $$ = $2; }
             | var { $$ = $1; }
             | call { $$ = $1; }
             | NUM {
-                $$ = newExpNode(constK);
-                $$->attr.val = $4;
+                $$ = newExpNode(ConstK);
+                $$->attr.val = $1;
             }
             ;
 call        : ID LPAREN args RPAREN {
