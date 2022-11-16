@@ -5,7 +5,7 @@ typedef int TokenType;
 /**************************************************/
 
 typedef enum {StmtK,ExpK,DeclK,ListK} NodeKind;
-typedef enum {CompoundK,SelectK,IterK,RetK} StmtKind;
+typedef enum {CompoundK,SelectK,IterK,RetK,NopK} StmtKind;
 typedef enum {AssignK,BinaryOpK,ConstK,IdK,CallK} ExpKind;
 typedef enum {DeclListK,ParamListK,LocalDeclListK,StmtListK,ArgListK} ListKind;
 typedef enum {FunK,VarK,ParamK} DeclKind;

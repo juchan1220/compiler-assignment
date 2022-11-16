@@ -259,7 +259,9 @@ void printTree(TreeNode *tree)
   
   while (tree != NULL)
   {
-    if (tree->nodekind != ListK) {
+    if (tree->nodekind != ListK
+      && !(tree->nodekind == StmtK && tree->kind.stmt == NopK)
+    ) {
       printSpaces();
     }
 
@@ -286,6 +288,9 @@ void printTree(TreeNode *tree)
         } else {
           fprintf(listing, "Return Statement:\n");
         }
+        break;
+      case NopK:
+        // Print nothing!
         break;
       default:
         fprintf(listing, "Unknown ExpNode kind\n");

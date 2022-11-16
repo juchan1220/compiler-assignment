@@ -208,7 +208,7 @@ incompl_stmt: IF LPAREN expr RPAREN stmt {
             }
             ;
 expr_stmt   : expr SEMI { $$ = $1; }
-            | SEMI { $$ = NULL; }
+            | SEMI { $$ = newStmtNode(NopK); }
             ;
 ret_stmt    : RETURN SEMI { $$ = newStmtNode(RetK); }
             | RETURN expr SEMI {
