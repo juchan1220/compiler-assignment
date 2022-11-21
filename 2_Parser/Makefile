@@ -41,4 +41,4 @@ y.tab.o: y.tab.c parse.h
 	$(CC) $(CFLAGS) -c y.tab.c
 
 y.tab.c: cminus.y
-	bison -d -v cminus.y -o y.tab.c -Wcex
+	bison -d -v cminus.y -o y.tab.c
