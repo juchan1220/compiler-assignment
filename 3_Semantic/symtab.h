@@ -9,22 +9,91 @@
 #ifndef _SYMTAB_H_
 #define _SYMTAB_H_
 
+
+#define HASH_TABLE_SIZE 211
+
+typedef enum { FuncSymbol = 1, VarSymbol = 2 } SymbolKind;
+
+const int ONLY_FUNC_SYMBOL;
+const int ONLY_VAR_SYMBOL;
+const int ALL_SYMBOL;
+
+typedef struct LineListRec
+   { int lineno;
+     struct LineListRec * next;
+   } * LineList;
+
+
+typedef struct Parameter {
+  ExpType type;
+  struct ParameterType* next;
+} * ParameterList;
+
+
+typedef struct FunctionType {
+  ExpType returnType;
+  ParameterList params;
+} ;
+
+typedef struct BucketListRec
+   { char * name;
+     LineList lines;
+     int memloc ; /* memory location for variable */
+     struct BucketListRec * next;
+     SymbolKind kind;
+     union { ExpType varType; struct FunctionType funType; } type;
+   } * BucketList;
+
+
+typedef struct ScopeListRec {
+  char *name;
+  BucketList bucket[HASH_TABLE_SIZE];
+  struct ScopeListRec *parent; // for symbol table hierarchy
+  uint location_count;
+} * ScopeList;
+
+
+/**
+ * @brief input(), output() 함수를 포함한 기본 global symbol table을 생성합니다.
+ * 
+ * @return ScopeList 
+ */
+ScopeList createGlobalScope (void);
+
+
+/**
+ * @brief 함수 스코프 symbol table을 생성합니다.
+ * 
+ * @param name 
+ * @param parent 
+ * @return ScopeList 
+ */
+ScopeList createLocalScope (char* name, ScopeList parent);
+
 /* Procedure st_insert inserts line numbers and
  * memory locations into the symbol table
  * loc = memory location is inserted only the
  * first time, otherwise ignored
  */
-void st_insert( char * name, int lineno, int loc );
+void insertSymbol(ScopeList scope, char* name, SymbolKind kind, ExpType type, int lineno);
 
-/* Function st_lookup returns the memory 
- * location of a variable or -1 if not found
+
+void addParameterType (ScopeList scope, ExpType type);
+
+
+/**
+ * @brief 주어진 scope에서만 주어진 kindFlag, name에 해당하는 symbol을 lookup합니다.
+ * 
+ * @param scope 
+ * @param name 
+ * @return BucketList 없는 경우 NULL을 반환합니다.
  */
-int st_lookup ( char * name );
+BucketList lookupScope (ScopeList scope, char *name, int kindFlag);
 
 /* Procedure printSymTab prints a formatted 
  * listing of the symbol table contents 
  * to the listing file
  */
-void printSymTab(FILE * listing);
+void printScope(FILE * listing, ScopeList scope);
 
 #endif

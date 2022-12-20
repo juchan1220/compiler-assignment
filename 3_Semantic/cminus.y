@@ -48,13 +48,13 @@ program     : decl_list { savedTree = $1; }
             ;
 decl_list   : decl_list decl {
               $$ = $1;
-              $$->child[1]->sibling = $2;
-              $$->child[1] = $2;
+              $$->attr.lastChildOfList->sibling = $2;
+              $$->attr.lastChildOfList = $2;
             }
             | decl {
               $$ = newListNode(DeclListK); 
               $$->child[0] = $1;
-              $$->child[1] = $1;
+              $$->attr.lastChildOfList = $1;
             }
             ;
 decl        : var_decl { $$ = $1; }
@@ -105,13 +105,13 @@ params      : param_list { $$ = $1; }
             ;
 param_list  : param_list COMMA param { 
               $$ = $1;
-              $$->child[1]->sibling = $3;
-              $$->child[1] = $3;
+              $$->attr.lastChildOfList->sibling = $3;
+              $$->attr.lastChildOfList = $3;
             }
             | param {
               $$ = newListNode(ParamListK);
               $$->child[0] = $1;
-              $$->child[1] = $1;
+              $$->attr.lastChildOfList = $1;
             }
             ;
 param       : type_spec ID LBRACE RBRACE {
@@ -147,11 +147,11 @@ local_decls : local_decls var_decl {
               if ($1 == NULL) {
                 $$ = newListNode(LocalDeclListK);
                 $$->child[0] = $2;
-                $$->child[1] = $2;
+                $$->attr.lastChildOfList = $2;
               } else {
                 $$ = $1;
-                $$->child[1]->sibling = $2;
-                $$->child[1] = $2;
+                $$->attr.lastChildOfList->sibling = $2;
+                $$->attr.lastChildOfList = $2;
               }
             }
             | %empty { $$ = NULL; }
@@ -160,11 +160,11 @@ stmt_list   : stmt_list stmt {
               if ($1 == NULL) {
                 $$ = newListNode(StmtListK);
                 $$->child[0] = $2;
-                $$->child[1] = $2;
+                $$->attr.lastChildOfList = $2;
               } else {
                 $$ = $1;
-                $$->child[1]->sibling = $2;
-                $$->child[1] = $2;
+                $$->attr.lastChildOfList->sibling = $2;
+                $$->attr.lastChildOfList = $2;
               }
             }
             | %empty { $$ = NULL; }

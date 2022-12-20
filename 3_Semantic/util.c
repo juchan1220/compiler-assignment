@@ -119,6 +119,7 @@ TreeNode *newStmtNode(StmtKind kind)
     t->nodekind = StmtK;
     t->kind.stmt = kind;
     t->lineno = lineno;
+    t->scope = NULL;
   }
   return t;
 }
@@ -141,6 +142,7 @@ TreeNode *newExpNode(ExpKind kind)
     t->kind.exp = kind;
     t->lineno = lineno;
     t->type = Void;
+    t->scope = NULL;
   }
   return t;
 }
@@ -162,6 +164,7 @@ TreeNode *newDeclNode(DeclKind kind) {
     t->kind.decl = kind;
     t->lineno = lineno;
     t->type = Void;
+    t->scope = NULL;
   }
 
   return t;
@@ -183,6 +186,7 @@ TreeNode *newListNode(ListKind kind) {
     t->nodekind = ListK;
     t->kind.decl = kind;
     t->lineno = lineno;
+    t->scope = NULL;
   }
 
   return t;

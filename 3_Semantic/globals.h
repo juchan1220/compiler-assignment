@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
+#include <assert.h>
 
 /* Yacc/Bison generates internally its own values
  * for the tokens. Other files can access these values

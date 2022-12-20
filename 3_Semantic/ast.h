@@ -1,4 +1,9 @@
+#ifndef _AST_H_
+#define _AST_H_
+
 typedef int TokenType; 
+
+typedef struct ScopeListRec* ScopeList;
 
 /**************************************************/
 /***********   Syntax tree for parsing ************/
@@ -25,6 +30,10 @@ typedef struct treeNode
              int val;
              char * name;
              int has_else;
+             struct treeNode* lastChildOfList;
              } attr;
      ExpType type; /* for type checking of exps */
+     ScopeList scope;
    } TreeNode;
+
+#endif
