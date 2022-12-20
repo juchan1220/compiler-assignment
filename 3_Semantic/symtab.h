@@ -47,9 +47,10 @@ typedef struct BucketListRec
 
 typedef struct ScopeListRec {
   char *name;
-  BucketList bucket[HASH_TABLE_SIZE];
+  BucketList bucket[HASH_TABLE_SIZE][2]; // [0] is first, [1] is last
   struct ScopeListRec *parent; // for symbol table hierarchy
-  uint location_count;
+  int locationCount;
+  int funcSymbolLocOnGlobal;
 } * ScopeList;
 
 
@@ -62,7 +63,7 @@ ScopeList createGlobalScope (void);
 
 
 /**
- * @brief 함수 스코프 symbol table을 생성합니다.
+ * @brief 함수 스코프, nested 스코프의 symbol table을 생성합니다.
  * 
  * @param name 
  * @param parent 
@@ -89,6 +90,10 @@ void addParameterType (ScopeList scope, ExpType type);
  * @return BucketList 없는 경우 NULL을 반환합니다.
  */
 BucketList lookupScope (ScopeList scope, char *name, int kindFlag);
+
+BucketList lookupScopeRecursive (ScopeList scope, char *name, int kindFlag);
+
+BucketList lookupFunctionOnGlobalWithLocation (ScopeList scope, char *name, int location);
 
 /* Procedure printSymTab prints a formatted 
  * listing of the symbol table contents 

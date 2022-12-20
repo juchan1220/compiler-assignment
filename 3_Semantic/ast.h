@@ -16,7 +16,7 @@ typedef enum {DeclListK,ParamListK,LocalDeclListK,StmtListK,ArgListK} ListKind;
 typedef enum {FunK,VarK,ParamK} DeclKind;
 
 /* ExpType is used for type checking */
-typedef enum {Void,Integer,VoidArray,IntegerArray} ExpType;
+typedef enum {Void,Integer,VoidArray,IntegerArray,Unknown} ExpType;
 
 #define MAXCHILDREN 3
 

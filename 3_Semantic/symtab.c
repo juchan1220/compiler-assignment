@@ -35,12 +35,6 @@ static int hash ( char * key )
   return temp;
 }
 
-/**
- * @brief Create a Parameter object
- * 
- * @param type 파라미터의 타입
- * @return ParameterList
- */
 static ParameterList createParameter (ExpType type) {
   ParameterList p = malloc(sizeof(struct Parameter));
   p->type = type;
@@ -50,10 +44,6 @@ static ParameterList createParameter (ExpType type) {
 }
 
 
-/* the list of line numbers of the source 
- * code in which a variable is referenced
- */
-
 static LineList createLine (int lineno) {
   LineList line = malloc(sizeof(struct LineListRec));
   line->lineno = lineno;
@@ -61,15 +51,6 @@ static LineList createLine (int lineno) {
 
   return line;
 }
-
-
-/* The record in the bucket lists for
- * each variable, including name, 
- * assigned memory location, and
- * the list of line numbers in which
- * it appears in the source code
- */
-
 
 
 static BucketList createBucket (char* name, int lineno) {
@@ -82,38 +63,31 @@ static BucketList createBucket (char* name, int lineno) {
   return bucket;
 }
 
+static void insertBucket (ScopeList scope, BucketList bucket) {
+  int hashed = hash(bucket->name);
+
+  if (scope->bucket[hashed][1] == NULL) {
+    scope->bucket[hashed][0] = scope->bucket[hashed][1] = bucket;
+    bucket->next = NULL;
+  } else {
+    scope->bucket[hashed][1]->next = bucket;
+    scope->bucket[hashed][1] = bucket;
+  }
+}
+
+
 static ScopeList createScope (void) {
   ScopeList scope = malloc(sizeof(struct ScopeListRec));
   
   for (int i = 0; i < HASH_TABLE_SIZE; i++) {
-    scope->bucket[i] = NULL;
+    scope->bucket[i][0] = scope->bucket[i][1] = NULL;
   }
 
   scope->name = NULL;
   scope->parent = NULL;
-  scope->location_count = 0;
+  scope->locationCount = 0;
 
   return scope;
-}
-
-static void insertBucket (ScopeList scope, BucketList bucket) {
-  int hashed = hash(bucket->name);
-
-  bucket->next = scope->bucket[hashed];
-  scope->bucket[hashed] = bucket;
-}
-
-static BucketList getBucket (ScopeList scope, char* name) {
-  int hashed = hash(name);
-  BucketList iter = scope->bucket[hashed];
-
-  while (iter != NULL && strcpy(iter->name, name) != 0) {
-    iter = iter->next;
-  }
-
-  assert(iter != NULL);
-
-  return iter;
 }
 
 ScopeList createGlobalScope (void) {
@@ -125,9 +99,9 @@ ScopeList createGlobalScope (void) {
     BucketList bucket = createBucket("input", 0);
     bucket->kind = FuncSymbol;
     bucket->type.funType.returnType = Integer;
-    bucket->type.funType.params = createParameter(Void);
+    bucket->type.funType.params = NULL;
 
-    bucket->memloc = scope->location_count++;
+    bucket->memloc = scope->locationCount++;
     
     insertBucket(scope, bucket);
   }
@@ -138,7 +112,7 @@ ScopeList createGlobalScope (void) {
     bucket->type.funType.returnType = Void;
     bucket->type.funType.params = createParameter(Integer);
     
-    bucket->memloc = scope->location_count++;
+    bucket->memloc = scope->locationCount++;
 
     insertBucket(scope, bucket);
   }
@@ -154,23 +128,63 @@ ScopeList createLocalScope (char* name, ScopeList parent) {
   return scope;
 }
 
+
+BucketList lookupFunctionOnGlobalWithLocation (ScopeList scope, char *name, int location) {
+  while (scope->parent != NULL) {
+    scope = scope->parent;
+  }
+
+  int h = hash(name);
+  BucketList b = scope->bucket[h][0];
+
+  while (b != NULL) {
+    if (b->memloc == location) {
+      break;
+    }
+    
+    b = b->next;
+  }
+  
+  return b;
+}
+
+BucketList lookupScope (ScopeList scope, char *name, int kindFlag) {
+  int h = hash(name);
+  BucketList b = scope->bucket[h][0];
+
+  while (b != NULL) {
+    if (strcmp(name, b->name) == 0 && (b->kind & kindFlag) != 0) {
+      break;
+    }
+    
+    b = b->next;
+  }
+  
+  return b;
+}
+
+BucketList lookupScopeRecursive (ScopeList scope, char *name, int kindFlag) {
+  while (scope != NULL) {
+    BucketList b = lookupScope(scope, name, kindFlag);
+
+    if (b != NULL) {
+      return b;
+    }
+
+    scope = scope->parent;
+  }
+  
+}
+
 /* Procedure st_insert inserts line numbers and
  * memory locations into the symbol table
  * loc = memory location is inserted only the
  * first time, otherwise ignored
  */
 void insertSymbol(ScopeList scope, char* name, SymbolKind kind, ExpType type, int lineno) {
-  int h = hash(name);
-  BucketList l = scope->bucket[h];
+  BucketList l = createBucket(name, lineno);
 
-  while ((l != NULL) && (strcmp(name, l->name) != 0))
-    l = l->next;
-  
-  if (l == NULL) {
-    /* variable not yet in table */ 
-    l = createBucket(name, lineno);
-    l->memloc = scope->location_count++;
-    l->next = scope->bucket[h];
+    l->memloc = scope->locationCount++;
     l->kind = kind;
 
     if (kind == VarSymbol) {
@@ -178,24 +192,24 @@ void insertSymbol(ScopeList scope, char* name, SymbolKind kind, ExpType type, in
     } else {
       l->type.funType.returnType = type;
     }
-  
-    scope->bucket[h] = l;
-  } else {
-    /* found in table, so just add line number */
-    LineList t = l->lines;
 
-    while (t->next != NULL) t = t->next;
-    t->next = createLine(lineno);
-  }
+    insertBucket(scope, l);
+}
+
+void addReference(ScopeList scope, char* name, SymbolKind kind, int lineno) {
+  // TODO: 
 }
 
 
 void addParameterType (ScopeList scope, ExpType type) {
   assert(scope->parent != NULL);
   
-  BucketList func = lookupScope(scope->parent, scope->name, ONLY_FUNC_SYMBOL);
+  BucketList func = lookupFunctionOnGlobalWithLocation(scope, scope->name, scope->funcSymbolLocOnGlobal);
 
-  assert(func != NULL);
+  if (func == NULL) {
+    // 이미 있는 함수를 재정의해서, 상위 스코프에서 심볼이 추가되지 않은 경우
+    return ;
+  }
 
   ParameterList iter = func->type.funType.params;
   
@@ -211,26 +225,6 @@ void addParameterType (ScopeList scope, ExpType type) {
 }
 
 
-
-BucketList lookupScopeRecursive (ScopeList scope) {
-
-}
-
-BucketList lookupScope (ScopeList scope, char *name, int kindFlag) {
-  int h = hash(name);
-  BucketList b = scope->bucket[h];
-
-  while (b != NULL) {
-    if (strcmp(name, b->name) == 0 && (b->kind & kindFlag) != 0) {
-      break;
-    }
-    
-    b = b->next;
-  }
-  
-  return b;
-}
-
 /* Procedure printSymTab prints a formatted 
  * listing of the symbol table contents 
  * to the listing file
@@ -243,11 +237,11 @@ void printScope(FILE * listing, ScopeList scope)
   fprintf(listing,"-------------  --------  ---------   ------------\n");
 
   for (i=0;i<HASH_TABLE_SIZE;++i) {
-    if (scope->bucket[i] == NULL) {
+    if (scope->bucket[i][0] == NULL) {
       continue;
     }
 
-    BucketList l = scope->bucket[i];
+    BucketList l = scope->bucket[i][0];
 
     while (l != NULL) {
       LineList t = l->lines;
@@ -281,6 +275,34 @@ void printScope(FILE * listing, ScopeList scope)
         t = t->next;
       }
       fprintf(listing,"\n");
+
+
+      if (l->kind == FuncSymbol) {
+        ParameterList p = l->type.funType.params;
+        fprintf(listing, "params: ");
+        if (p == NULL) {
+          fprintf(listing, "void\n");
+        } else {
+          ExpType type;
+
+          while (p != NULL) {
+            ExpType type = p->type;
+            const char* typeString = NULL;
+
+                    switch (type) {
+          case Integer: typeString = "int"; break;
+          case IntegerArray: typeString = "int[]"; break;
+          case Void: typeString = "void"; break;
+          case VoidArray: typeString = "void[]"; break;
+        }
+
+                fprintf(listing, "%s, ", typeString);
+            p = p->next;
+          }
+          fprintf(listing, "\n");
+
+        }
+      }
       l = l->next;
     }
   }

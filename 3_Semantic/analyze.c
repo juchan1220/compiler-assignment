@@ -15,10 +15,57 @@ typedef void (* TraverseInvokeFun) (TreeNode *, ScopeList);
 
 static void printRedefineError (char* name, int line) {
   fprintf(listing, "Error: Symbol \"%s\" is redefined at line %d\n", name, line);
+  // Error = TRUE;
 }
 
 static void printVoidVariableError (char* name, int line) {
   fprintf(listing, "Error: The void-type variable is declared at line %d (name : \"%s\")\n", line, name);
+  // Error = TRUE;
+}
+
+static void printUndeclaredVariableError (char *name, int line) {
+  fprintf(listing, "Error: Undeclared variable \"%s\" is used at line %d\n", line);
+  // Error = TRUE;
+}
+
+static void printUndeclaredFunctionError (char *name, int line) {
+  fprintf(listing, "Error: Undeclared function \"%s\" is called at line %d\n", line);
+  // Error = TRUE;
+}
+
+static void printNonIntegerIndexError (char *name, int line) {
+  fprintf(listing, "Error: Invalid array indexing at line %d (name : \"%s\"). Indicies should be integer\n", line, name);
+  // Error = TRUE;
+}
+
+static void printNonArrayIndexingError (char *name, int line) {
+  fprintf(listing, "Error: Invalid array indexing at line %d (name : \"%s\"). Indexing can only be allowed for int[] variables\n", line, name);
+  // Error = TRUE;
+}
+
+static void printInvalidFunctionCall (char *name, int line) {
+  fprintf(listing, "Error: Invalid function call at line %d (name : \"%s\")\n", line, name);
+  // Error = TRUE;
+}
+
+static void printInvalidOperation (int line) {
+  fprintf(listing, "Error: Invalid operation at line %d\n", lineno);
+  // Error = TRUE;
+}
+
+static void printInvalidAssignment (int line) {
+  fprintf(listing, "Error: Invalid assignment at line %d\n", line);
+  // Error = TRUE;
+}
+
+static void printInvalidCondition (int line) {
+  fprintf(listing, "Error: invalid condition at line %d\n", line);
+  // Error = TRUE;
+}
+
+static void printInvalidReturn (int line) {
+  fprintf(listing, "Error: Invalid return at line %d\n", line);
+  // Error = TRUE;
 }
 
 /* Procedure traverse is a generic recursive 
@@ -83,7 +130,7 @@ static void insertVariableSymbol (TreeNode *t, ScopeList scope) {
 }
 
 
-static void insertFunctionSymbol (TreeNode *t, ScopeList scope) {
+static int insertFunctionSymbol (TreeNode *t, ScopeList scope) {
   BucketList sameNameSymbol = lookupScope(scope, t->attr.name, ALL_SYMBOL);
 
   if (sameNameSymbol != NULL) {
@@ -95,8 +142,14 @@ static void insertFunctionSymbol (TreeNode *t, ScopeList scope) {
   sameNameSymbol = lookupScope(scope, t->attr.name, ONLY_FUNC_SYMBOL);
   if (sameNameSymbol == NULL) {
     insertSymbol(scope, t->attr.name, FuncSymbol, t->type, t->lineno);
+
+    sameNameSymbol = lookupScope(scope, t->attr.name, ONLY_FUNC_SYMBOL);
+
+    return sameNameSymbol->memloc;
     // 파라미터 정보는 ParamK 노드에서 처리
   }
+
+  return -1;
 }
 
 
@@ -130,7 +183,9 @@ static void insertParamSymbol (TreeNode *t, ScopeList scope) {
  */
 static void insertNode (TreeNode * t, ScopeList scope) {
   static int isNextCompoundFunctionBody = FALSE;
+  int funcLocation = -1;
 
+  // TODO: 심볼 추가 시에 input, output 이름은 항상 걸러야 하는가?
   // 선언으로부터 심볼 추가
   if (t->nodekind == DeclK) {
       switch (t->kind.decl) {
@@ -138,7 +193,7 @@ static void insertNode (TreeNode * t, ScopeList scope) {
           insertVariableSymbol(t, scope);
           break;
         case FunK: // 함수 선언
-          insertFunctionSymbol(t, scope);
+          funcLocation = insertFunctionSymbol(t, scope);
           isNextCompoundFunctionBody = TRUE;
           break;
         case ParamK: // 파라미터
@@ -150,12 +205,13 @@ static void insertNode (TreeNode * t, ScopeList scope) {
   // Function Declaration 노드인 경우, 새로운 스코프를 생성
   if (t->nodekind == DeclK && t->kind.decl == FunK) {
     t->scope = createLocalScope(t->attr.name, scope);
+    t->scope->funcSymbolLocOnGlobal = funcLocation;
   }
 
   // Compound Statement면서, 부모가 Function Declaration 노드가 아닌 경우, 새로운 스코프를 생성
   if (t->nodekind == StmtK && t->kind.stmt == CompoundK) {
     if (!isNextCompoundFunctionBody) {
-      t->scope = createLocalScope(NULL, scope);
+      t->scope = createLocalScope(scope->name, scope);
     } else {
       isNextCompoundFunctionBody = FALSE;
     }
@@ -168,31 +224,173 @@ static void printScopeOfNode (TreeNode *t, ScopeList scope) {
   }
 }
 
-/* Function buildSymtab constructs the symbol 
- * table by preorder traversal of the syntax tree
- */
-void buildSymtab(TreeNode * syntaxTree) {
-  syntaxTree->scope = createGlobalScope();
+static void typeCheckSingleIdExpr (TreeNode *node, ScopeList scope) {
+  BucketList symbol = lookupScopeRecursive(scope, node->attr.name, ONLY_VAR_SYMBOL);
 
-  traverse(syntaxTree, NULL, insertNode, nullProc);
-
-  if (TraceAnalyze) {
-    fprintf(listing,"\nSymbol table:\n\n");
-    traverse(syntaxTree, NULL, printScopeOfNode, nullProc);
+  if (symbol == NULL) {
+    printUndeclaredVariableError(node->attr.name, node->lineno);
+    node->type = Unknown;
+  } else {
+    node->type = symbol->type.varType;
   }
 }
 
+static void typeCheckArrayRefIdExpr (TreeNode *node, ScopeList scope) {
+  BucketList symbol = lookupScopeRecursive(scope, node->attr.name, ONLY_VAR_SYMBOL);
 
-static void typeError(TreeNode * t, char * message)
-{ fprintf(listing,"Type error at line %d: %s\n",t->lineno,message);
-  Error = TRUE;
+  // symbol 정의 여부 확인
+  if (symbol == NULL) {
+    printUndeclaredVariableError(node->attr.name, node->lineno);
+    node->type = Unknown;
+    return ;
+  }
+
+  // symbol 타입 확인
+  if (symbol->type.varType != IntegerArray) {
+    printNonArrayIndexingError(node->attr.name, node->lineno);
+    
+    if (symbol->type.varType == VoidArray) {
+      node->type = Void;
+    } else {
+      node->type = Unknown;
+    }
+  } else {
+    node->type = Integer;
+  }
+
+  // index 타입 확인
+  if (node->child[0]->type != Integer) {
+    printNonIntegerIndexError(node->attr.name, node->lineno);
+  }
+}
+
+static void typeCheckAssignment (TreeNode *node, ScopeList scope) {
+  // TODO: Integer 가 아닌 타입 간의 assignment는 허용인가?
+  if (node->child[0]->type != Integer || node->child[1]->type != Integer) {
+    printInvalidAssignment(node->lineno);
+    node->type = Unknown;
+  } else {
+    node->type = node->child[0]->type;
+  }
+}
+
+static void typeCheckBinaryOp (TreeNode *node, ScopeList scope) {
+  if (node->child[0]->type != Integer || node->child[1]->type != Integer) {
+    printInvalidOperation(node->lineno);
+    node->type = Unknown;
+  } else {
+    node->type = Integer;
+  }
+}
+
+static void typeCheckCall (TreeNode *node, ScopeList scope) {
+  BucketList symbol = lookupScopeRecursive(scope, node->attr.name, ONLY_FUNC_SYMBOL);
+
+  if (symbol == NULL) {
+    printUndeclaredFunctionError(node->attr.name, node->lineno);
+    node->type = Unknown;
+    return ;
+  }
+
+  ParameterList p = symbol->type.funType.params;
+  TreeNode* arg = node->child[0]; // ListK - ArgListK
+
+  if (p == NULL) {
+    if (arg != NULL) {
+      printInvalidFunctionCall(node->attr.name, node->lineno);
+    }
+  } else {
+    arg = arg->child[0];
+
+    while (p != NULL && arg != NULL) {
+
+      p = p->next;
+      arg = arg->sibling;
+    }
+
+    if (p != NULL || arg != NULL) {
+      printInvalidFunctionCall(node->attr.name, node->lineno);
+    }
+  }
+
+  node->type = symbol->type.funType.returnType;
+}
+
+static void typeCheckSelectStmt (TreeNode* node, ScopeList scope) {
+  if (node->child[0]->type != Integer) {
+    printInvalidCondition(node->lineno);
+  }
+}
+
+static void typeCheckIterStmt (TreeNode *node, ScopeList scope) {
+  if (node->child[0]->type != Integer) {
+    printInvalidCondition(node->lineno);
+  }
+}
+
+static void typeCheckRetStmt (TreeNode *node, ScopeList scope) {
+  BucketList symbol = lookupFunctionOnGlobalWithLocation(scope, scope->name, scope->funcSymbolLocOnGlobal);
+  assert(symbol != NULL && symbol->kind == FuncSymbol);
+
+  if (node->child[0] == NULL && symbol->type.funType.returnType != Void) {
+    printInvalidReturn(node->lineno);
+    return ;
+  }
+
+  if (node->child[0]->type != symbol->type.funType.returnType) {
+    printInvalidReturn(node->lineno);
+    return ;
+  }
 }
 
 /* Procedure checkNode performs
  * type checking at a single tree node
  */
-static void checkNode(TreeNode * t)
-{/*  switch (t->nodekind)
+static void checkNode(TreeNode * t, ScopeList scope) {
+
+  switch (t->nodekind) {
+    case ExpK:
+      switch (t->kind.exp) {
+        case IdK:
+          if (t->child[0] == NULL) {
+            typeCheckSingleIdExpr(t, scope);
+          } else {
+            typeCheckArrayRefIdExpr(t, scope);
+          }
+          break;
+        case AssignK:
+          typeCheckAssignment(t, scope);
+          break;
+        case ConstK:
+          t->type = Integer;
+          break;
+        case BinaryOpK:
+          typeCheckBinaryOp(t, scope);
+          break;
+        case CallK:
+          typeCheckCall(t, scope);
+          break;
+      }
+      break;
+    case StmtK:
+      switch (t->kind.stmt) {
+        case SelectK:
+          typeCheckSelectStmt(t, scope);
+          break;
+        case IterK:
+          typeCheckIterStmt(t, scope);
+          break;
+        case RetK:
+          typeCheckRetStmt(t, scope);
+          break;
+      }
+      break;
+    default:
+      break;
+  }
+
+
+/*  switch (t->nodekind)
   { case ExpK:
       switch (t->kind.exp)
       { case OpK:
@@ -246,4 +444,18 @@ static void checkNode(TreeNode * t)
 void typeCheck(TreeNode * syntaxTree)
 {
   // traverse(syntaxTree,nullProc,checkNode);
+}
+
+/* Function buildSymtab constructs the symbol 
+ * table by preorder traversal of the syntax tree
+ */
+void buildSymtab(TreeNode * syntaxTree) {
+  syntaxTree->scope = createGlobalScope();
+
+  traverse(syntaxTree, NULL, insertNode, checkNode);
+
+  if (TraceAnalyze) {
+    fprintf(listing,"\nSymbol table:\n\n");
+    traverse(syntaxTree, NULL, printScopeOfNode, nullProc);
+  }
 }
