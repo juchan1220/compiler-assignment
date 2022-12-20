@@ -1,0 +1,9 @@
+testcase/**/*
+cminus_semantic
+error_message.c
+*.o
+lex.yy.c
+y.tab.c
+y.tab.h
+y.output
+*.cm
