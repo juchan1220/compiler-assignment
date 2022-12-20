@@ -191,6 +191,7 @@ BucketList insertSymbol(ScopeList scope, char* name, SymbolKind kind, ExpType ty
       l->type.varType = type;
     } else {
       l->type.funType.returnType = type;
+      l->type.funType.params = NULL;
     }
 
     insertBucket(scope, l);

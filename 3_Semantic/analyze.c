@@ -80,14 +80,14 @@ static void traverse(TreeNode * t,
   }
 
   for (int i=0; i < MAXCHILDREN; i++)
-    traverse(t->child[i], currentScope, preProc,postProc);
+    traverse(t->child[i], currentScope, preProc, postProc);
 
   if (prevScope != NULL) {
     currentScope = prevScope;
   }
 
   postProc(t, currentScope);
-  traverse(t->sibling, currentScope, preProc,postProc);
+  traverse(t->sibling, currentScope, preProc, postProc);
 }
 
 /* nullProc is a do-nothing procedure to 
@@ -219,11 +219,6 @@ static void typeCheckArrayRefIdExpr (TreeNode *node, ScopeList scope) {
   BucketList symbol = lookupScopeRecursive(scope, node->attr.name, ONLY_VAR_SYMBOL);
   node->type = Integer;
 
-  // index 타입 확인
-  if (node->child[0]->type != Integer) {
-    printNonIntegerIndexError(node->attr.name, node->lineno);
-  }
-
   // symbol 정의 여부 확인
   if (symbol == NULL) {
     printUndeclaredVariableError(node->attr.name, node->lineno);
@@ -233,6 +228,12 @@ static void typeCheckArrayRefIdExpr (TreeNode *node, ScopeList scope) {
     printNonArrayIndexingError(node->attr.name, node->lineno);
     node->type = Unknown;
   }
+
+  // index 타입 확인
+  if (node->child[0]->type != Integer) {
+    printNonIntegerIndexError(node->attr.name, node->lineno);
+  }
+
 }
 
 static void typeCheckAssignment (TreeNode *node, ScopeList scope) {
@@ -264,27 +265,25 @@ static void typeCheckCall (TreeNode *node, ScopeList scope) {
   }
 
   ParameterList p = symbol->type.funType.params;
-  TreeNode* arg = node->child[0]; // ListK - ArgListK
+  TreeNode* arg = NULL;
 
-  if (p == NULL) {
-    if (arg != NULL) {
-      printInvalidFunctionCall(node->attr.name, node->lineno);
-    }
-  } else {
-    arg = arg->child[0];
+  if (node->child[0] != NULL) {
+    arg = node->child[0]->child[0];
+  }
 
-    while (p != NULL && arg != NULL) {
-      if (p->type != arg->type) {
-        break;
-      }
-
-      p = p->next;
-      arg = arg->sibling;
+  // 파라미터가 아예 없으면 void 타입 -> NULL
+  // 리스트가 아예 없으면 void 타입 -> NULL
+  while (p != NULL && arg != NULL) {
+    if (p->type != arg->type) {
+      break;
     }
 
-    if (p != NULL || arg != NULL) {
-      printInvalidFunctionCall(node->attr.name, node->lineno);
-    }
+    p = p->next;
+    arg = arg->sibling;
+  }
+
+  if (p != NULL || arg != NULL) {
+    printInvalidFunctionCall(node->attr.name, node->lineno);
   }
 
   node->type = symbol->type.funType.returnType;

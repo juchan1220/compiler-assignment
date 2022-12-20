@@ -346,8 +346,6 @@ void printTree(TreeNode *tree)
 
           break;
       }
-    } else if (tree->nodekind == ListK) {
-      tree->child[1] = NULL;
     } else {
       fprintf(listing, "Unknown node kind\n");
     }
