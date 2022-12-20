@@ -181,7 +181,7 @@ BucketList lookupScopeRecursive (ScopeList scope, char *name, int kindFlag) {
  * loc = memory location is inserted only the
  * first time, otherwise ignored
  */
-void insertSymbol(ScopeList scope, char* name, SymbolKind kind, ExpType type, int lineno) {
+BucketList insertSymbol(ScopeList scope, char* name, SymbolKind kind, ExpType type, int lineno) {
   BucketList l = createBucket(name, lineno);
 
     l->memloc = scope->locationCount++;
@@ -194,6 +194,8 @@ void insertSymbol(ScopeList scope, char* name, SymbolKind kind, ExpType type, in
     }
 
     insertBucket(scope, l);
+
+    return l;
 }
 
 void addReference(ScopeList scope, char* name, SymbolKind kind, int lineno) {
@@ -202,15 +204,9 @@ void addReference(ScopeList scope, char* name, SymbolKind kind, int lineno) {
 
 
 void addParameterType (ScopeList scope, ExpType type) {
-  assert(scope->parent != NULL);
-  
   BucketList func = lookupFunctionOnGlobalWithLocation(scope, scope->name, scope->funcSymbolLocOnGlobal);
-
-  if (func == NULL) {
-    // 이미 있는 함수를 재정의해서, 상위 스코프에서 심볼이 추가되지 않은 경우
-    return ;
-  }
-
+  assert(func != NULL);
+  
   ParameterList iter = func->type.funType.params;
   
   if (iter == NULL) {

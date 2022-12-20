@@ -15,57 +15,46 @@ typedef void (* TraverseInvokeFun) (TreeNode *, ScopeList);
 
 static void printRedefineError (char* name, int line) {
   fprintf(listing, "Error: Symbol \"%s\" is redefined at line %d\n", name, line);
-  // Error = TRUE;
 }
 
 static void printVoidVariableError (char* name, int line) {
   fprintf(listing, "Error: The void-type variable is declared at line %d (name : \"%s\")\n", line, name);
-  // Error = TRUE;
 }
 
 static void printUndeclaredVariableError (char *name, int line) {
-  fprintf(listing, "Error: Undeclared variable \"%s\" is used at line %d\n", line);
-  // Error = TRUE;
+  fprintf(listing, "Error: Undeclared variable \"%s\" is used at line %d\n", name, line);
 }
 
 static void printUndeclaredFunctionError (char *name, int line) {
-  fprintf(listing, "Error: Undeclared function \"%s\" is called at line %d\n", line);
-  // Error = TRUE;
+  fprintf(listing, "Error: Undeclared function \"%s\" is called at line %d\n", name, line);
 }
 
 static void printNonIntegerIndexError (char *name, int line) {
   fprintf(listing, "Error: Invalid array indexing at line %d (name : \"%s\"). Indicies should be integer\n", line, name);
-  // Error = TRUE;
 }
 
 static void printNonArrayIndexingError (char *name, int line) {
   fprintf(listing, "Error: Invalid array indexing at line %d (name : \"%s\"). Indexing can only be allowed for int[] variables\n", line, name);
-  // Error = TRUE;
 }
 
 static void printInvalidFunctionCall (char *name, int line) {
   fprintf(listing, "Error: Invalid function call at line %d (name : \"%s\")\n", line, name);
-  // Error = TRUE;
 }
 
 static void printInvalidOperation (int line) {
-  fprintf(listing, "Error: Invalid operation at line %d\n", lineno);
-  // Error = TRUE;
+  fprintf(listing, "Error: Invalid operation at line %d\n", line);
 }
 
 static void printInvalidAssignment (int line) {
   fprintf(listing, "Error: Invalid assignment at line %d\n", line);
-  // Error = TRUE;
 }
 
 static void printInvalidCondition (int line) {
-  fprintf(listing, "Error: invalid condition at line %d\n", line);
-  // Error = TRUE;
+  fprintf(listing, "Error: Invalid condition at line %d\n", line); 
 }
 
 static void printInvalidReturn (int line) {
   fprintf(listing, "Error: Invalid return at line %d\n", line);
-  // Error = TRUE;
 }
 
 /* Procedure traverse is a generic recursive 
@@ -105,7 +94,7 @@ static void traverse(TreeNode * t,
  * generate preorder-only or postorder-only
  * traversals from traverse
  */
-static void nullProc(TreeNode * t)
+static void nullProc(TreeNode * t, ScopeList scope)
 { if (t==NULL) return;
   else return;
 }
@@ -138,18 +127,8 @@ static int insertFunctionSymbol (TreeNode *t, ScopeList scope) {
     printRedefineError(t->attr.name, t->lineno);
   }
 
-  // 이후 타입 체크를 위해 중복 정의더라도 Fun / Var 각 하나씩은 저장
-  sameNameSymbol = lookupScope(scope, t->attr.name, ONLY_FUNC_SYMBOL);
-  if (sameNameSymbol == NULL) {
-    insertSymbol(scope, t->attr.name, FuncSymbol, t->type, t->lineno);
-
-    sameNameSymbol = lookupScope(scope, t->attr.name, ONLY_FUNC_SYMBOL);
-
-    return sameNameSymbol->memloc;
-    // 파라미터 정보는 ParamK 노드에서 처리
-  }
-
-  return -1;
+  // 타입 체크를 위해 재정의라도 무조건 symbol에 추가해야함
+  return insertSymbol(scope, t->attr.name, FuncSymbol, t->type, t->lineno)->memloc;
 }
 
 
@@ -212,6 +191,7 @@ static void insertNode (TreeNode * t, ScopeList scope) {
   if (t->nodekind == StmtK && t->kind.stmt == CompoundK) {
     if (!isNextCompoundFunctionBody) {
       t->scope = createLocalScope(scope->name, scope);
+      t->scope->funcSymbolLocOnGlobal = scope->funcSymbolLocOnGlobal;
     } else {
       isNextCompoundFunctionBody = FALSE;
     }
@@ -237,30 +217,21 @@ static void typeCheckSingleIdExpr (TreeNode *node, ScopeList scope) {
 
 static void typeCheckArrayRefIdExpr (TreeNode *node, ScopeList scope) {
   BucketList symbol = lookupScopeRecursive(scope, node->attr.name, ONLY_VAR_SYMBOL);
+  node->type = Integer;
+
+  // index 타입 확인
+  if (node->child[0]->type != Integer) {
+    printNonIntegerIndexError(node->attr.name, node->lineno);
+  }
 
   // symbol 정의 여부 확인
   if (symbol == NULL) {
     printUndeclaredVariableError(node->attr.name, node->lineno);
     node->type = Unknown;
-    return ;
-  }
-
-  // symbol 타입 확인
-  if (symbol->type.varType != IntegerArray) {
+  } else if (symbol->type.varType != IntegerArray) {
+    // symbol 타입 확인
     printNonArrayIndexingError(node->attr.name, node->lineno);
-    
-    if (symbol->type.varType == VoidArray) {
-      node->type = Void;
-    } else {
-      node->type = Unknown;
-    }
-  } else {
-    node->type = Integer;
-  }
-
-  // index 타입 확인
-  if (node->child[0]->type != Integer) {
-    printNonIntegerIndexError(node->attr.name, node->lineno);
+    node->type = Unknown;
   }
 }
 
@@ -303,6 +274,9 @@ static void typeCheckCall (TreeNode *node, ScopeList scope) {
     arg = arg->child[0];
 
     while (p != NULL && arg != NULL) {
+      if (p->type != arg->type) {
+        break;
+      }
 
       p = p->next;
       arg = arg->sibling;
@@ -318,13 +292,13 @@ static void typeCheckCall (TreeNode *node, ScopeList scope) {
 
 static void typeCheckSelectStmt (TreeNode* node, ScopeList scope) {
   if (node->child[0]->type != Integer) {
-    printInvalidCondition(node->lineno);
+    printInvalidCondition(node->child[0]->lineno);
   }
 }
 
 static void typeCheckIterStmt (TreeNode *node, ScopeList scope) {
   if (node->child[0]->type != Integer) {
-    printInvalidCondition(node->lineno);
+    printInvalidCondition(node->child[0]->lineno);
   }
 }
 
@@ -332,14 +306,12 @@ static void typeCheckRetStmt (TreeNode *node, ScopeList scope) {
   BucketList symbol = lookupFunctionOnGlobalWithLocation(scope, scope->name, scope->funcSymbolLocOnGlobal);
   assert(symbol != NULL && symbol->kind == FuncSymbol);
 
-  if (node->child[0] == NULL && symbol->type.funType.returnType != Void) {
+  if (node->child[0] == NULL) {
+    if (symbol->type.funType.returnType != Void) {
+      printInvalidReturn(node->lineno);
+    }
+  } else if (node->child[0]->type != symbol->type.funType.returnType) {
     printInvalidReturn(node->lineno);
-    return ;
-  }
-
-  if (node->child[0]->type != symbol->type.funType.returnType) {
-    printInvalidReturn(node->lineno);
-    return ;
   }
 }
 
@@ -388,54 +360,6 @@ static void checkNode(TreeNode * t, ScopeList scope) {
     default:
       break;
   }
-
-
-/*  switch (t->nodekind)
-  { case ExpK:
-      switch (t->kind.exp)
-      { case OpK:
-          if ((t->child[0]->type != Integer) ||
-              (t->child[1]->type != Integer))
-            typeError(t,"Op applied to non-integer");
-          if ((t->attr.op == EQ) || (t->attr.op == LT))
-            t->type = Boolean;
-          else
-            t->type = Integer;
-          break;
-        case ConstK:
-        case IdK:
-          t->type = Integer;
-          break;
-        default:
-          break;
-      }
-      break;
-    case StmtK:
-      switch (t->kind.stmt)
-      { case IfK:
-          if (t->child[0]->type == Integer)
-            typeError(t->child[0],"if test is not Boolean");
-          break;
-        case AssignK:
-          if (t->child[0]->type != Integer)
-            typeError(t->child[0],"assignment of non-integer value");
-          break;
-        case WriteK:
-          if (t->child[0]->type != Integer)
-            typeError(t->child[0],"write of non-integer value");
-          break;
-        case RepeatK:
-          if (t->child[1]->type == Integer)
-            typeError(t->child[1],"repeat test is not Boolean");
-          break;
-        default:
-          break;
-      }
-      break;
-    default:
-      break;
-
-  } */
 }
 
 /* Procedure typeCheck performs type checking 

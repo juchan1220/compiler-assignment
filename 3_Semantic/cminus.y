@@ -288,13 +288,13 @@ args        : arg_list { $$ = $1; }
             | %empty { $$ = NULL; }
             ;
 arg_list    : arg_list COMMA expr {
-              $$->child[1]->sibling = $3;
-              $$->child[1] = $3;
+              $$->attr.lastChildOfList->sibling = $3;
+              $$->attr.lastChildOfList = $3;
             }
             | expr {
               $$ = newListNode(ArgListK);
               $$->child[0] = $1;
-              $$->child[1] = $1;
+              $$->attr.lastChildOfList = $1;
              }
             ;
 

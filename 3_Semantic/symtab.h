@@ -26,7 +26,7 @@ typedef struct LineListRec
 
 typedef struct Parameter {
   ExpType type;
-  struct ParameterType* next;
+  struct Parameter* next;
 } * ParameterList;
 
 
@@ -76,7 +76,7 @@ ScopeList createLocalScope (char* name, ScopeList parent);
  * loc = memory location is inserted only the
  * first time, otherwise ignored
  */
-void insertSymbol(ScopeList scope, char* name, SymbolKind kind, ExpType type, int lineno);
+BucketList insertSymbol(ScopeList scope, char* name, SymbolKind kind, ExpType type, int lineno);
 
 
 void addParameterType (ScopeList scope, ExpType type);
