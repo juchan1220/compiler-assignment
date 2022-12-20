@@ -237,12 +237,15 @@ static void typeCheckArrayRefIdExpr (TreeNode *node, ScopeList scope) {
 }
 
 static void typeCheckAssignment (TreeNode *node, ScopeList scope) {
-  // TODO: Integer 가 아닌 타입 간의 assignment는 허용인가?
-  if (node->child[0]->type != Integer || node->child[1]->type != Integer) {
+  // TODO: Integer 가 아닌 타입 간의 assignment는 허용인가? 일단은 허용
+  if (node->child[0]->type != Unknown
+  && node->child[1]->type != Unknown
+  && node->child[0]->type == node->child[1]->type
+  ) {
+    node->type = node->child[0]->type;
+  } else {
     printInvalidAssignment(node->lineno);
     node->type = Unknown;
-  } else {
-    node->type = node->child[0]->type;
   }
 }
 
