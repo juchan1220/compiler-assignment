@@ -13,20 +13,16 @@
 
 typedef void (* TraverseInvokeFun) (TreeNode *, ScopeList);
 
-static void printRedefineError (char* name, int line) {
-  fprintf(listing, "Error: Symbol \"%s\" is redefined at line %d\n", name, line);
-}
-
-static void printVoidVariableError (char* name, int line) {
-  fprintf(listing, "Error: The void-type variable is declared at line %d (name : \"%s\")\n", line, name);
+static void printUndeclaredFunctionError (char *name, int line) {
+  fprintf(listing, "Error: Undeclared function \"%s\" is called at line %d\n", name, line);
 }
 
 static void printUndeclaredVariableError (char *name, int line) {
   fprintf(listing, "Error: Undeclared variable \"%s\" is used at line %d\n", name, line);
 }
 
-static void printUndeclaredFunctionError (char *name, int line) {
-  fprintf(listing, "Error: Undeclared function \"%s\" is called at line %d\n", name, line);
+static void printRedefineError (char* name, int line) {
+  fprintf(listing, "Error: Symbol \"%s\" is redefined at line %d\n", name, line);
 }
 
 static void printNonIntegerIndexError (char *name, int line) {
@@ -39,6 +35,10 @@ static void printNonArrayIndexingError (char *name, int line) {
 
 static void printInvalidFunctionCall (char *name, int line) {
   fprintf(listing, "Error: Invalid function call at line %d (name : \"%s\")\n", line, name);
+}
+
+static void printVoidVariableError (char* name, int line) {
+  fprintf(listing, "Error: The void-type variable is declared at line %d (name : \"%s\")\n", line, name);
 }
 
 static void printInvalidOperation (int line) {
@@ -164,7 +164,6 @@ static void insertNode (TreeNode * t, ScopeList scope) {
   static int isNextCompoundFunctionBody = FALSE;
   int funcLocation = -1;
 
-  // TODO: 심볼 추가 시에 input, output 이름은 항상 걸러야 하는가?
   // 선언으로부터 심볼 추가
   if (t->nodekind == DeclK) {
       switch (t->kind.decl) {
@@ -237,7 +236,6 @@ static void typeCheckArrayRefIdExpr (TreeNode *node, ScopeList scope) {
 }
 
 static void typeCheckAssignment (TreeNode *node, ScopeList scope) {
-  // TODO: Integer 가 아닌 타입 간의 assignment는 허용인가? 일단은 허용
   if (node->child[0]->type != Unknown
   && node->child[1]->type != Unknown
   && node->child[0]->type == node->child[1]->type
